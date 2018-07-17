@@ -1,48 +1,37 @@
 package routes
 
 import (
-	"encoding/json"
 	"net/http"
+	"strconv"
+	"time"
+
+	"../models"
+	"github.com/gorilla/mux"
 )
 
-type User struct {
-	Id    int64
-	Name  string
-	Email string
-}
-
-type Users []User
-
-// func (u *Users) findByID(id int) (*User, error) {
-// 	for i := 0; i < len(*u); i++ {
-// 		if *u[i].Id == id {
-// 			return &*u[i], nil
-// 		}
-// 	}
-
-// 	return nil, error("invalid ID")
-// }
-
-var UsersList Users = Users{
-	User{
-		Id:    1,
-		Name:  "Aurino Victor",
-		Email: "aurino.victor@catho.com",
-	},
-	User{
-		Id:    2,
-		Name:  "Michael Armando",
-		Email: "michael.armando@catho.com",
-	},
-}
+var userModel models.UserModel = models.UserModel{}
 
 // HandleGetOneUser Fetches a user
 func HandleGetOneUser(w http.ResponseWriter, r *http.Request) {
-	// vars := mux.Vars(r)
-	// userID, _ := strconv.Atoi(vars["id"])
+	defer SyncLogs(time.Now())
 
-	user := UsersList[0]
+	params := mux.Vars(r)
+	paramID, _ := strconv.Atoi(params["id"])
+	userID := uint64(paramID)
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	json.NewEncoder(w).Encode(user)
+	user := userModel.FindByID(userID)
+	if user == nil {
+		body := models.HTTPError{Message: "Not found"}
+		models.SendJSON(http.StatusNotFound, body, w)
+		return
+	}
+
+	models.SendJSON(http.StatusOK, *user, w)
+}
+
+// HandleGetUsers Fetches all users
+func HandleGetUsers(w http.ResponseWriter, r *http.Request) {
+	defer SyncLogs(time.Now())
+	users := userModel.FindAll()
+	models.SendJSON(http.StatusOK, users, w)
 }
